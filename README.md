@@ -1,6 +1,6 @@
 # wgpu-utils
 
-A collection of builder utilities for the [wgpu](https://github.com/gfx-rs/wgpu) WebGPU graphics library. Simplifies the creation of GPU pipelines, buffers, bind groups, and textures with a chainable, intuitive API.
+A collection of builder utilities for the [wgpu](https://github.com/gfx-rs/wgpu) graphics library. Simplifies the creation of GPU pipelines, buffers, bind groups, and textures with a chainable, intuitive API.
 
 ## Features
 
@@ -17,7 +17,7 @@ Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 wgpu-utils = "29.0.0"
-wgpu = "0.19"
+wgpu = "29.0.*"
 ```
 
 **Compatiable with wgpu versions 29.0.\***
@@ -196,10 +196,6 @@ let compute_pipeline = ComputePipelineBuilder::new(device)
     .add_bind_group_layout(&compute_layout)
     .build("compute_pipeline");
 ```
-
-## License
-
-MIT
 
 ## Contributing
 

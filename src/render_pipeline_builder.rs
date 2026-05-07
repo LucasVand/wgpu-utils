@@ -41,7 +41,7 @@ pub struct RenderPipelineBuilder<'a> {
     fragment: Option<&'a str>,
     primitive: Option<PrimitiveState>,
 
-    vertex_buffers: Vec<VertexBufferLayout<'a>>,
+    vertex_buffer_layouts: &'a [VertexBufferLayout<'a>],
 
     depth_stencil: Option<DepthStencilState>,
     targets: Vec<Option<ColorTargetState>>,
@@ -71,7 +71,7 @@ impl<'a> RenderPipelineBuilder<'a> {
             primitive: None,
             vertex: None,
             fragment: None,
-            vertex_buffers: Vec::new(),
+            vertex_buffer_layouts: &[],
             targets: Vec::new(),
             depth_stencil: None,
             immediate_size: 0,
@@ -159,9 +159,9 @@ impl<'a> RenderPipelineBuilder<'a> {
     /// Sets the vertex buffer layouts.
     ///
     /// # Arguments
-    /// * `vertex_buffers` - Vector of vertex buffer layouts
-    pub fn vertex_buffers(mut self, vertex_buffers: Vec<VertexBufferLayout<'a>>) -> Self {
-        self.vertex_buffers = vertex_buffers;
+    /// * `vertex_buffers` - slice of vertex buffer layouts
+    pub fn vertex_buffers(mut self, vertex_buffers: &'a [VertexBufferLayout<'a>]) -> Self {
+        self.vertex_buffer_layouts = vertex_buffers;
         self
     }
 
@@ -302,7 +302,7 @@ impl<'a> RenderPipelineBuilder<'a> {
                     module: &module,
                     entry_point: self.vertex,
                     compilation_options: self.vertex_compilation_options,
-                    buffers: &self.vertex_buffers,
+                    buffers: &self.vertex_buffer_layouts,
                 },
                 primitive,
                 depth_stencil: self.depth_stencil,
@@ -313,7 +313,7 @@ impl<'a> RenderPipelineBuilder<'a> {
                     compilation_options: self.fragment_compilation_options,
                     targets: &self.targets,
                 }),
-                multiview_mask: None,
+                multiview_mask: self.multiview_mask,
                 cache: None,
             })
     }

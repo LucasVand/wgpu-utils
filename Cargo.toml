@@ -3,5 +3,12 @@ name = "wgpu-utils"
 version = "29.0.0"
 edition = "2024"
 
+authors = ["lucasvanderwielen@icloud.com"]
+description = "Collection of easy to use builder utilities for wgpu"
+readme = "README.md"
+repository = "https://github.com/LucasVand/wgpu-utils"
+license = "MIT" 
+
+keywords = ["graphics", "wgpu", "WebGPU", "utility"]
 [dependencies]
 wgpu = "29.0.*"

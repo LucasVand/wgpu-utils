@@ -23,7 +23,7 @@ pub struct BufferAllocation {
 /// let mut shared_buffer = SharedBuffer::new(device, 4096);
 /// let idx1 = shared_buffer.allocate(queue, &data1, "data1");
 /// let idx2 = shared_buffer.allocate(queue, &data2, "data2");
-/// 
+///
 /// // Update data later
 /// shared_buffer.update(queue, idx1, &new_data1);
 /// ```
@@ -287,11 +287,11 @@ impl SharedBuffer {
     }
 
     fn align_offset(&self, offset: u64) -> u64 {
-        ((offset + Self::ALIGNMENT - 1) / Self::ALIGNMENT) * Self::ALIGNMENT
+        offset.div_ceil(Self::ALIGNMENT) * Self::ALIGNMENT
     }
 
     fn align_offset_uniform(&self, offset: u64) -> u64 {
         const UNIFORM_ALIGNMENT: u64 = 256;
-        ((offset + UNIFORM_ALIGNMENT - 1) / UNIFORM_ALIGNMENT) * UNIFORM_ALIGNMENT
+        offset.div_ceil(UNIFORM_ALIGNMENT) * UNIFORM_ALIGNMENT
     }
 }

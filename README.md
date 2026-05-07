@@ -51,6 +51,26 @@ let pipeline = ComputePipelineBuilder::new(&device)
     .build("compute_pipeline");
 ```
 
+### Creating a Render Pass
+
+```rust
+use wgpu::{Color};
+use wgpu_utils::RenderPassBuilder;
+
+let mut render_pass = RenderPassBuilder::new()
+    .label("main_render_pass")
+    .add_color_attachment()
+    .view(&color_view)
+    .clear(Color::BLACK)
+    .finalize()
+    .add_color_attachment()
+    .view(&second_color_view)
+    .load()
+    .finalize()
+    .depth_stencil_clear(&depth_view)
+    .build(&mut encoder);
+```
+
 ### Creating Bind Groups
 
 ```rust
@@ -78,7 +98,7 @@ let buffer = BufferBuilder::new(&device)
 // Empty buffer
 let buffer = BufferBuilder::new(&device)
     .usages(BufferUsages::STORAGE)
-    .size(1024)
+    .size(1024) // buffer of size 1024 bytes
     .build("storage_buffer");
 ```
 

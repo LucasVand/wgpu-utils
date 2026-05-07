@@ -19,10 +19,13 @@ Creates WebGPU render pipelines with full control over shading and rasterization
 - `.add_bind_group_layout()` - Bind group layouts
 - `.vertex_buffers()` - Vertex buffer layouts
 - `.depth()` - Depth testing and writing
+- `.add_target_format()` - Add render target with default blend
+- `.add_target()` - Add render target with custom write mask and blend
 - `.blend_state()` - Custom blending
 - `.vertex_compilation_options()` - Vertex shader compilation options
 - `.fragment_compilation_options()` - Fragment shader compilation options
 - `.compilation_options()` - Set both shader compilation options at once
+- `.multiview_mask()` - Multiview rendering support
 
 ### ComputePipelineBuilder
 
@@ -121,3 +124,39 @@ Creates compute passes for compute work.
 **Methods:**
 
 - `.label()` - Optional debug label
+
+### RenderPassBuilder
+
+Creates render passes for rendering operations with fine-grained control over attachments.
+
+**Required methods before `build()`:**
+
+- `.add_color_attachment()` - At least one color attachment must be added
+
+**Color Attachment Configuration Methods:**
+
+- `.add_color_attachment()` - Start building a new color attachment
+  - `.view()` - Texture view to render into
+  - `.clear()` - Clear with specified color
+  - `.load()` - Load existing data
+  - `.store()` - Enable/disable storing results
+  - `.resolve_target()` - MSAA resolve target
+  - `.depth_slice()` - Depth slice for array/3D textures
+  - `.finalize()` - Complete attachment and return to render pass builder
+
+**Depth/Stencil Configuration Methods:**
+
+- `.depth_view()` - Set depth texture view
+- `.depth_load_op()` - Depth load operation
+- `.depth_store()` - Enable/disable depth storage
+- `.stencil_load_op()` - Stencil load operation
+- `.stencil_store()` - Enable/disable stencil storage
+- `.depth_stencil_clear()` - Convenience method for clearing both depth and stencil
+- `.depth_stencil_load()` - Convenience method for loading both depth and stencil
+
+**Other Methods:**
+
+- `.label()` - Optional debug label
+- `.timestamp_writes()` - Timestamp query configuration
+- `.occlusion_query_set()` - Occlusion query setup
+- `.multiview_mask()` - Multiview rendering support

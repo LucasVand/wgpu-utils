@@ -8,6 +8,7 @@ mod command_encoder_builder;
 mod compute_pass_builder;
 mod compute_pipeline_builder;
 mod generic_shared_buffer;
+mod render_pass_builder;
 mod render_pipeline_builder;
 mod texture_builder;
 
@@ -18,5 +19,6 @@ pub use command_encoder_builder::CommandEncoderBuilder;
 pub use compute_pass_builder::ComputePassBuilder;
 pub use compute_pipeline_builder::ComputePipelineBuilder;
 pub use generic_shared_buffer::{BufferAllocation, SharedBuffer};
+pub use render_pass_builder::RenderPassBuilder;
 pub use render_pipeline_builder::RenderPipelineBuilder;
 pub use texture_builder::TextureBuilder;

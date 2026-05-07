@@ -1,5 +1,6 @@
 //! Builder for creating render pipelines with a fluent API.
 
+use std::num::NonZeroU32;
 use wgpu::{
     BindGroupLayout, BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
     DepthStencilState, Device, FragmentState, FrontFace, MultisampleState,
@@ -43,11 +44,11 @@ pub struct RenderPipelineBuilder<'a> {
     vertex_buffers: Vec<VertexBufferLayout<'a>>,
 
     depth_stencil: Option<DepthStencilState>,
-    color_targets: Vec<Option<ColorTargetState>>,
-    blend_state: Option<BlendState>,
+    targets: Vec<Option<ColorTargetState>>,
     immediate_size: u32,
     vertex_compilation_options: PipelineCompilationOptions<'a>,
     fragment_compilation_options: PipelineCompilationOptions<'a>,
+    multiview_mask: Option<NonZeroU32>,
 }
 
 impl<'a> RenderPipelineBuilder<'a> {
@@ -71,12 +72,12 @@ impl<'a> RenderPipelineBuilder<'a> {
             vertex: None,
             fragment: None,
             vertex_buffers: Vec::new(),
-            color_targets: Vec::new(),
+            targets: Vec::new(),
             depth_stencil: None,
-            blend_state: None,
             immediate_size: 0,
             vertex_compilation_options: PipelineCompilationOptions::default(),
             fragment_compilation_options: PipelineCompilationOptions::default(),
+            multiview_mask: None,
         }
     }
 
@@ -104,19 +105,6 @@ impl<'a> RenderPipelineBuilder<'a> {
     /// * `module` - The shader module
     pub fn shader_module(mut self, module: ShaderModule) -> Self {
         self.module = Some(module);
-        self
-    }
-
-    /// Creates and sets a shader module from WGSL source code (alternative name).
-    ///
-    /// # Arguments
-    /// * `naga` - The WGSL shader source code
-    /// * `label` - Optional label for the shader module
-    pub fn shader_naga(mut self, naga: &'a str, label: &'a str) -> Self {
-        self.module = Some(self.device.create_shader_module(ShaderModuleDescriptor {
-            label: Some(label),
-            source: ShaderSource::Wgsl(naga.into()),
-        }));
         self
     }
 
@@ -192,25 +180,49 @@ impl<'a> RenderPipelineBuilder<'a> {
         self
     }
 
-    /// Sets the render target color format.
+    /// Adds a render target color format. If this function is used multiple times then
+    /// it allows for Multiple Render Targets
     ///
     /// # Arguments
     /// * `format` - The color target format
-    pub fn color_format(mut self, format: TextureFormat) -> Self {
-        self.color_targets = vec![Some(ColorTargetState {
+    pub fn add_target_format(mut self, format: TextureFormat) -> Self {
+        self.targets.push(Some(ColorTargetState {
             format,
             blend: Some(BlendState::ALPHA_BLENDING),
             write_mask: ColorWrites::ALL,
-        })];
+        }));
         self
     }
 
-    /// Sets a custom blend state.
+    /// Adds a render target with specific write mask and blend state.
+    ///
+    /// Allows fine-grained control over individual render target configuration.
+    /// Use this for Multiple Render Targets with different blend and write settings.
     ///
     /// # Arguments
-    /// * `blend` - The blend state
-    pub fn blend_state(mut self, blend: BlendState) -> Self {
-        self.blend_state = Some(blend);
+    /// * `format` - The color target format
+    /// * `write_mask` - Which color channels to write (e.g., `ColorWrites::ALL`, `ColorWrites::RED | ColorWrites::BLUE`)
+    /// * `blend` - Optional blend state (None for no blending)
+    ///
+    /// # Example
+    /// ```ignore
+    /// pipeline.add_target(
+    ///     TextureFormat::Bgra8UnormSrgb,
+    ///     ColorWrites::RGB,
+    ///     Some(BlendState::ALPHA_BLENDING),
+    /// )
+    /// ```
+    pub fn add_target(
+        mut self,
+        format: TextureFormat,
+        write_mask: ColorWrites,
+        blend: Option<BlendState>,
+    ) -> Self {
+        self.targets.push(Some(ColorTargetState {
+            format,
+            blend,
+            write_mask,
+        }));
         self
     }
 
@@ -242,6 +254,23 @@ impl<'a> RenderPipelineBuilder<'a> {
         self
     }
 
+    /// Sets the multiview mask for multiview rendering.
+    ///
+    /// The multiview mask determines which views in a multiview texture array to render to.
+    /// A value of 0 means standard rendering without multiview.
+    ///
+    /// # Arguments
+    /// * `mask` - The multiview mask as a NonZeroU32, or None for standard rendering
+    ///
+    /// # Example
+    /// ```ignore
+    /// pipeline.multiview_mask(30)  // Render to views 0 and 1
+    /// ```
+    pub fn multiview_mask(mut self, mask: u32) -> Self {
+        self.multiview_mask = NonZeroU32::new(mask);
+        self
+    }
+
     /// Builds the render pipeline.
     ///
     /// # Panics
@@ -265,22 +294,6 @@ impl<'a> RenderPipelineBuilder<'a> {
                 immediate_size: self.immediate_size,
             });
 
-        // Apply blend state to color targets if it was set
-        let color_targets = if let Some(blend) = self.blend_state {
-            vec![Some(ColorTargetState {
-                format: self
-                    .color_targets
-                    .first()
-                    .and_then(|ct| ct.as_ref())
-                    .map(|ct| ct.format)
-                    .expect("RenderPipelineBuilder: color format not set"),
-                blend: Some(blend),
-                write_mask: ColorWrites::ALL,
-            })]
-        } else {
-            self.color_targets
-        };
-
         self.device
             .create_render_pipeline(&RenderPipelineDescriptor {
                 label: Some(label),
@@ -298,7 +311,7 @@ impl<'a> RenderPipelineBuilder<'a> {
                     module: &module,
                     entry_point: self.fragment,
                     compilation_options: self.fragment_compilation_options,
-                    targets: &color_targets,
+                    targets: &self.targets,
                 }),
                 multiview_mask: None,
                 cache: None,

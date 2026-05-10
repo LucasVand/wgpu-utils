@@ -9,10 +9,31 @@ Creates WebGPU render pipelines with full control over shading and rasterization
 **Required methods before `build()`:**
 
 - `.shader()` - WGSL shader source
-- `.primitive()` - Triangle, Line, or Point topology
+- `.topology()` or convenience methods (`.triangles()`, `.lines()`, etc.) - Primitive topology
 - `.vertex_entry()` - Vertex shader entry point
 - `.fragment_entry()` - Fragment shader entry point
 - `.color_format()` - Output color format
+
+**Topology Methods:**
+
+- `.topology()` - Set primitive topology explicitly
+- `.triangles()` - Convenience: Triangle list
+- `.triangle_strip()` - Convenience: Triangle strip with index format
+- `.lines()` - Convenience: Line list
+- `.line_strip()` - Convenience: Line strip with index format
+- `.points()` - Convenience: Point list
+
+**Rasterization Configuration:**
+
+- `.strip_index_format()` - Index format for strip topologies
+- `.front_face()` - Winding order (Ccw or Cw)
+- `.cull_mode()` - Face culling (None, Some(Face::Front), Some(Face::Back))
+- `.cull_front()` - Convenience: Enable front face culling
+- `.cull_back()` - Convenience: Enable back face culling
+- `.no_cull()` - Convenience: Disable face culling
+- `.unclipped_depth()` - Enable/disable depth clamping
+- `.polygon_mode()` - Polygon rendering (Fill, Line, Point)
+- `.conservative()` - Enable/disable conservative rasterization
 
 **Optional methods:**
 

@@ -3,7 +3,7 @@
 use std::num::NonZeroU32;
 use wgpu::{
     BindGroupLayout, BlendState, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
-    DepthStencilState, Device, FragmentState, FrontFace, MultisampleState,
+    DepthStencilState, Device, Face, FragmentState, FrontFace, IndexFormat, MultisampleState,
     PipelineCompilationOptions, PipelineLayoutDescriptor, PolygonMode, PrimitiveState,
     PrimitiveTopology, RenderPipeline, RenderPipelineDescriptor, ShaderModule,
     ShaderModuleDescriptor, ShaderSource, StencilState, TextureFormat, VertexBufferLayout,
@@ -39,7 +39,15 @@ pub struct RenderPipelineBuilder<'a> {
     module: Option<ShaderModule>,
     vertex: Option<&'a str>,
     fragment: Option<&'a str>,
-    primitive: Option<PrimitiveState>,
+    
+    // Primitive state fields
+    topology: Option<PrimitiveTopology>,
+    strip_index_format: Option<IndexFormat>,
+    front_face: FrontFace,
+    cull_mode: Option<Face>,
+    unclipped_depth: bool,
+    polygon_mode: PolygonMode,
+    conservative: bool,
 
     vertex_buffer_layouts: &'a [VertexBufferLayout<'a>],
 
@@ -59,7 +67,7 @@ impl<'a> RenderPipelineBuilder<'a> {
     ///
     /// # Required Methods Before `build()`
     /// - `.shader()` - required
-    /// - `.primitive()` - required
+    /// - `.topology()` - required
     /// - `.vertex_entry()` - required
     /// - `.fragment_entry()` - required
     /// - `.color_format()` - required
@@ -68,9 +76,15 @@ impl<'a> RenderPipelineBuilder<'a> {
             device,
             bind_group_layouts: Vec::new(),
             module: None,
-            primitive: None,
             vertex: None,
             fragment: None,
+            topology: None,
+            strip_index_format: None,
+            front_face: FrontFace::Ccw,
+            cull_mode: None,
+            unclipped_depth: false,
+            polygon_mode: PolygonMode::Fill,
+            conservative: false,
             vertex_buffer_layouts: &[],
             targets: Vec::new(),
             depth_stencil: None,
@@ -143,16 +157,112 @@ impl<'a> RenderPipelineBuilder<'a> {
     ///
     /// # Arguments
     /// * `topology` - The primitive topology (e.g., TriangleList, LineList, PointList)
-    pub fn primitive(mut self, topology: PrimitiveTopology) -> Self {
-        self.primitive = Some(PrimitiveState {
-            topology,
-            strip_index_format: None,
-            front_face: FrontFace::Ccw,
-            cull_mode: None,
-            unclipped_depth: false,
-            polygon_mode: PolygonMode::Fill,
-            conservative: false,
-        });
+    pub fn topology(mut self, topology: PrimitiveTopology) -> Self {
+        self.topology = Some(topology);
+        self
+    }
+
+    /// Sets the strip index format for strip topologies.
+    ///
+    /// # Arguments
+    /// * `format` - The index format (Uint16 or Uint32)
+    pub fn strip_index_format(mut self, format: IndexFormat) -> Self {
+        self.strip_index_format = Some(format);
+        self
+    }
+
+    /// Sets the front face winding order.
+    ///
+    /// # Arguments
+    /// * `winding` - The winding order (Ccw or Cw)
+    pub fn front_face(mut self, winding: FrontFace) -> Self {
+        self.front_face = winding;
+        self
+    }
+
+    /// Sets the face culling mode.
+    ///
+    /// # Arguments
+    /// * `cull` - The culling mode (None, Some(Face::Front), or Some(Face::Back))
+    pub fn cull_mode(mut self, cull: Option<Face>) -> Self {
+        self.cull_mode = cull;
+        self
+    }
+
+    /// Enables or disables unclipped depth clamping.
+    ///
+    /// # Arguments
+    /// * `enabled` - Whether to enable unclipped depth
+    pub fn unclipped_depth(mut self, enabled: bool) -> Self {
+        self.unclipped_depth = enabled;
+        self
+    }
+
+    /// Sets the polygon rendering mode.
+    ///
+    /// # Arguments
+    /// * `mode` - The polygon mode (Fill, Line, or Point)
+    pub fn polygon_mode(mut self, mode: PolygonMode) -> Self {
+        self.polygon_mode = mode;
+        self
+    }
+
+    /// Enables or disables conservative rasterization.
+    ///
+    /// # Arguments
+    /// * `enabled` - Whether to enable conservative rasterization
+    pub fn conservative(mut self, enabled: bool) -> Self {
+        self.conservative = enabled;
+        self
+    }
+
+    /// Convenience method: Sets topology for triangle list rendering (default configuration).
+    pub fn triangles(mut self) -> Self {
+        self.topology = Some(PrimitiveTopology::TriangleList);
+        self
+    }
+
+    /// Convenience method: Sets topology for triangle strip rendering.
+    pub fn triangle_strip(mut self, index_format: IndexFormat) -> Self {
+        self.topology = Some(PrimitiveTopology::TriangleStrip);
+        self.strip_index_format = Some(index_format);
+        self
+    }
+
+    /// Convenience method: Sets topology for line list rendering.
+    pub fn lines(mut self) -> Self {
+        self.topology = Some(PrimitiveTopology::LineList);
+        self
+    }
+
+    /// Convenience method: Sets topology for line strip rendering.
+    pub fn line_strip(mut self, index_format: IndexFormat) -> Self {
+        self.topology = Some(PrimitiveTopology::LineStrip);
+        self.strip_index_format = Some(index_format);
+        self
+    }
+
+    /// Convenience method: Sets topology for point list rendering.
+    pub fn points(mut self) -> Self {
+        self.topology = Some(PrimitiveTopology::PointList);
+        self
+    }
+
+    /// Convenience method: Enables back face culling (default front face: Ccw).
+    pub fn cull_back(mut self) -> Self {
+        self.cull_mode = Some(Face::Back);
+        self
+    }
+
+    /// Convenience method: Enables front face culling (default front face: Ccw).
+    pub fn cull_front(mut self) -> Self {
+        self.cull_mode = Some(Face::Front);
+        self
+    }
+
+    /// Convenience method: Disables face culling.
+    pub fn no_cull(mut self) -> Self {
+        self.cull_mode = None;
         self
     }
 
@@ -274,7 +384,7 @@ impl<'a> RenderPipelineBuilder<'a> {
     /// Builds the render pipeline.
     ///
     /// # Panics
-    /// Panics if shader module, primitive topology, vertex entry, or fragment entry are not set.
+    /// Panics if shader module, topology, vertex entry, or fragment entry are not set.
     ///
     /// # Arguments
     /// * `label` - Optional label for debugging
@@ -282,9 +392,19 @@ impl<'a> RenderPipelineBuilder<'a> {
         let module = self.module.expect(
             "PipelineBuilder: shader module not set. Call .shader(wgsl_code, label) before build()",
         );
-        let primitive = self
-            .primitive
-            .expect("PipelineBuilder: primitive topology not set. Call .primitive(PrimitiveTopology) before build()");
+        let topology = self
+            .topology
+            .expect("PipelineBuilder: primitive topology not set. Call .topology(PrimitiveTopology) or use a convenience method like .triangles() before build()");
+
+        let primitive = PrimitiveState {
+            topology,
+            strip_index_format: self.strip_index_format,
+            front_face: self.front_face,
+            cull_mode: self.cull_mode,
+            unclipped_depth: self.unclipped_depth,
+            polygon_mode: self.polygon_mode,
+            conservative: self.conservative,
+        };
 
         let layout = self
             .device

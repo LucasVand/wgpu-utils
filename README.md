@@ -27,12 +27,13 @@ wgpu = "29.0.*"
 ### Creating a Render Pipeline
 
 ```rust
-use wgpu::{Device, ShaderStages, TextureFormat, PrimitiveTopology};
+use wgpu::{Device, ShaderStages, TextureFormat};
 use wgpu_utils::RenderPipelineBuilder;
 
 let pipeline = RenderPipelineBuilder::new(&device)
     .shader(SHADER_CODE, "main_shader")
-    .primitive(PrimitiveTopology::TriangleList)
+    .triangles()  // or use .topology(), .lines(), .points(), etc.
+    .cull_back()  // Convenience culling method
     .vertex_entry("vs_main")
     .fragment_entry("fs_main")
     .color_format(TextureFormat::Bgra8UnormSrgb)
